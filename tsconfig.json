@@ -12,6 +12,6 @@
 		"skipLibCheck": true,
 		"types": ["bun"]
 	},
-	"include": ["src", "test", "extensions"],
+	"include": ["src", "test"],
 	"exclude": ["node_modules", "dist"]
 }
