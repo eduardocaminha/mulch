@@ -1,6 +1,6 @@
 # Mulch Configuration Guide
 
-This guide covers `mulch.config.yaml` and the surrounding `.mulch/` surface for **v0.10.1**. It is the reference doc for orgs running Mulch across many repos and many ICs.
+This guide covers `mulch.config.yaml` and the surrounding `.mulch/` surface for **v0.10.2**. It is the reference doc for orgs running Mulch across many repos and many ICs.
 
 If you're new to Mulch, start with the [README](./README.md) — it covers what Mulch is and the day-one commands. This document assumes you already know `ml record` / `ml prime` and want to tune them.
 
@@ -558,14 +558,13 @@ The ladder (`foundational → tactical → observational → archived`) is hardc
 
 Filesystem wins so an org can shadow built-ins without forking Mulch.
 
-### Built-ins as of v0.10.1
+### Built-ins as of v0.10.2
 
 - `claude` — writes `SessionStart` hook into `.claude/`. `PreCompact` is intentionally not registered because its stdout is discarded across compaction.
 - `cursor` — writes Cursor's project rules surface.
 - `codex` — writes both an `AGENTS.md` mulch section (fallback prose) and a `[[hooks.SessionStart]]` block in `.codex/config.toml` fenced by `# mulch:start` / `# mulch:end` line comments for idempotency.
-- `pi` — writes `@os-eco/mulch-cli` to the `packages` array in `.pi/settings.json` (preserving existing entries), refreshes the CLAUDE.md / AGENTS.md mulch section to a pi-aware variant, and stamps the onboarding marker with a `:pi` suffix so detection logic doubles as install-state. Pairs with the in-tree `extensions/pi/` extension (see §Pi extension).
 
-**Removed in v0.9.0**: `aider`, `gemini`, `windsurf`. An audit found all three writing to paths the runtimes don't read. Users who relied on them can re-create the same behavior as a filesystem recipe under `.mulch/recipes/<name>.{ts,sh}`.
+**Removed in v0.9.0**: `aider`, `gemini`, `windsurf`. **Removed in v0.10.2**: `pi` (experiment rolled back). Users who relied on any of these can re-create the same behavior as a filesystem recipe under `.mulch/recipes/<name>.{ts,sh}`.
 
 ### TypeScript recipe shape
 
@@ -660,36 +659,6 @@ esac
 Make it executable (`chmod +x`), commit it under `.mulch/recipes/`, and `ml setup windsurf-org` Just Works in every repo that pulls the scaffolding.
 
 `ml setup --list` enumerates everything found with source + shadow markers, so it's easy to verify the filesystem recipe is winning over a built-in of the same name.
-
----
-
-## Pi extension (`pi.*`)
-
-The `pi` recipe pairs with the in-tree `@os-eco/pi-mulch` extension (`extensions/pi/`) shipped inside the mulch package. The extension is loaded by the [pi-coding-agent](https://github.com/earendil-works/pi-coding-agent) runtime via `peerDependencies` and is a no-op outside pi. Configure it through the `pi.*` block in `.mulch/mulch.config.yaml`:
-
-```yaml
-pi:
-  auto_prime: true               # run `ml prime` on session_start and inject the result
-  scope_load:
-    enabled: true                # fire `ml prime --files <path>` on tool_call read/edit/write
-    budget: 2000                 # per-call token budget for the scope-load prime
-    debounce_ms: 500             # coalesce rapid same-file events into one exec
-  tools: true                    # register record_expertise / query_expertise pi tools
-  commands: true                 # register /ml:prime slash command
-  agent_end_widget: true         # surface the `ml learn` nudge on agent_end
-```
-
-All knobs default to enabled and are read on every hook invocation, so edits take effect on `/reload` without restart.
-
-**`auto_prime`**: shells out to `ml prime` once at session start and injects the rendered markdown into the agent's systemPrompt via the `before_agent_start` hook, fenced by `<!-- mulch:prime:start -->` / `<!-- mulch:prime:end -->` banners for idempotent re-injection. Falls back to manifest mode when `prime.default_mode: manifest`.
-
-**`scope_load`**: when the LLM is about to read/edit/write a file, the extension fires `ml prime --files <path> --budget <pi.scope_load.budget>` and steers the rendered records into the message stream as a `display:false` steer. Per-path debounce coalesces rapid edit→read→edit sequences into one exec; an in-flight set blocks a second exec on the same path; `pi.appendEntry("mulch-scope-load", { path })` persists primed paths so post-`/reload` edits short-circuit before debounce.
-
-**`tools`**: registers two custom pi tools rebuilt on every `session_start` so per-project `allowed_types`, `custom_types`, and `required_fields` show up in the LLM-facing schema/description without restart. `record_expertise` writes a single-record JSON to `mkdtemp()` and invokes `ml record <domain> --batch <tmp> --json` (pi.exec has no stdin); pre-flight validation surfaces domain rules client-side. `query_expertise` wraps `ml search`, `ml prime --files`, and `ml prime <domain>` behind one call.
-
-**`commands`**: registers `/ml:prime [domain]` with autocomplete sourced from the live `mulch.config.yaml`.
-
-**`agent_end_widget`**: on `agent_end`, runs `ml learn --json` and renders one `Record: <domain>/<type>?` line per suggestion via `ctx.ui.setWidget`. Cleared on `session_start` and `session_shutdown` so `/reload`, fork, or quit don't strand stale UI.
 
 ---
 
@@ -898,13 +867,6 @@ Discovery from the command line:
 | `hooks.pre-prime` | `string[]` | — | Scripts run before `ml prime`. Mutable. Non-zero blocks. |
 | `hooks.pre-prune` | `string[]` | — | Scripts run before `ml prune`. Non-zero blocks. Stdout ignored. |
 | `hooks.pre-record` | `string[]` | — | Scripts run before a record is written. Mutable. Non-zero blocks. |
-| `pi.agent_end_widget` | bool | `true` | Render `ml learn` nudge widget on agent_end (pi extension). |
-| `pi.auto_prime` | bool | `true` | Run `ml prime` on session_start, inject via `before_agent_start` (pi extension). |
-| `pi.commands` | bool | `true` | Register `/ml:prime` slash command (pi extension). |
-| `pi.scope_load.budget` | int | `2000` | Per-call token budget for tool_call scope-load (pi extension). |
-| `pi.scope_load.debounce_ms` | int | `500` | Coalesce rapid same-file tool_call events into one exec (pi extension). |
-| `pi.scope_load.enabled` | bool | `true` | Fire `ml prime --files <path>` on tool_call read/edit/write (pi extension). |
-| `pi.tools` | bool | `true` | Register `record_expertise` / `query_expertise` pi tools (pi extension). |
 | `prime.default_mode` | enum | `full` | `full` or `manifest`. |
 | `prime.session_close.custom` | string | — | Verbatim footer prose. Wins over `style`. |
 | `prime.session_close.style` | enum | `conditional` | `directive` / `conditional` / `minimal` / `none`. |

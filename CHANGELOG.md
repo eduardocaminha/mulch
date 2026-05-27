@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.2] - 2026-05-26
+
+A cleanup release: adds `ml move` for transferring records between domains (#23), rolls back the experimental pi-mulch extension (mulch-88e9), and removes the `pi.*` config namespace. Three built-in provider recipes remain: claude, cursor, codex. 1382 tests across 67 files / 3621 expect() calls (down from 1465 / 72 / 3856 in 0.10.1 — the pi test suites accounted for the difference).
+
+### Added
+
+- **`ml move <domain> <id> <target-domain>` — transfer records between domains** (#23): moves a record from one domain to another, preserving the record's ID so existing `relates_to` / `supersedes` cross-references continue to resolve. Validates the record against the target domain's `allowed_types` and `required_fields` before writing; `--force` bypasses domain-rule checks. `--dry-run` previews without writing. Scans all other expertise files for incoming references (`relates_to` / `supersedes`) and emits informational warnings so users can audit the link graph. Uses `withFileLock` on both source and target files for concurrent safety. See `src/commands/move.ts`.
+
+### Removed
+
+- **Pi-mulch extension rolled back** (mulch-88e9): the entire `extensions/pi/` directory, the `pi.*` config namespace (`pi.auto_prime`, `pi.scope_load.*`, `pi.tools`, `pi.commands`, `pi.agent_end_widget`), the `pi` built-in provider recipe, pi-aware onboarding variant (`:pi` marker suffix), and all pi test suites (`test/extensions/pi-*.test.ts`, `test/commands/setup.test.ts` pi coverage) have been removed. The experiment shipped in v0.10.1; it's being rolled back after evaluation. Users who relied on the pi integration can re-create the same behavior as a filesystem recipe under `.mulch/recipes/pi.{ts,sh}`. The `@earendil-works/pi-coding-agent` peer dependency is dropped.
+- **`pi.*` config schema removed** — the `pi` block in `mulch.config.yaml` is no longer recognized. Existing configs with `pi.*` keys will fail schema validation; remove the block to resolve.
+- **`ml setup pi` removed** — three built-in recipes remain: `claude`, `cursor`, `codex`.
+
+### Changed
+
+- **`ml onboard` drops the `:pi` marker suffix** — the version marker is now always `<!-- mulch-onboard:v<version> -->` without a variant suffix. Existing `:pi`-suffixed markers are detected as outdated and migrated on the next `ml onboard` run.
+
+### Testing
+
+- 1382 tests across 67 files, 3621 expect() calls (down from 1465 / 72 / 3856 in 0.10.1). The decrease reflects removal of pi extension test suites. New suite: `test/commands/move.test.ts` covers domain transfer, dry-run, force bypass, cross-reference scanning, and domain-rule validation.
+
 ## [0.10.1] - 2026-05-15
 
 A polish release that ships the `@os-eco/pi-mulch` extension (pl-5563), makes the close-session footer configurable, and generalizes `ml audit` from seeds-only to tracker-agnostic. The pi extension is the first first-class runtime integration — `ml prime` auto-fires on session_start, scope-load fires on tool_call, and `record_expertise` / `query_expertise` tools register inside the agent process so the model stops escaping into bash for record I/O. 1465 tests across 72 files / 3856 expect() calls (up from 1225 / 61 / 3047 in 0.10.0).
@@ -691,7 +713,8 @@ Per-domain governance, lifecycle hooks, soft-archive prune, and pluggable provid
 - Prime output formats: `xml`, `plain`, `markdown`, `--mcp` (JSON)
 - Context-aware prime via `--context` (filters by git changed files)
 
-[Unreleased]: https://github.com/jayminwest/mulch/compare/v0.10.1...HEAD
+[Unreleased]: https://github.com/jayminwest/mulch/compare/v0.10.2...HEAD
+[0.10.2]: https://github.com/jayminwest/mulch/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/jayminwest/mulch/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/jayminwest/mulch/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/jayminwest/mulch/compare/v0.8.0...v0.9.0

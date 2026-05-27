@@ -58,17 +58,17 @@ Three classifications with shelf lives for pruning: `foundational` (permanent), 
 
 ### Provider Recipe Discovery
 
-`ml setup <name>` resolves recipes in this order: filesystem (`.mulch/recipes/<name>.ts` or `.sh`) → npm (`mulch-recipe-<name>`) → built-in (the six in `src/commands/setup.ts`). Filesystem wins so orgs can override built-ins without forking. TypeScript recipes are loaded directly by Bun and must default-export a `ProviderRecipe` (`install` / `check` / `remove` returning `{ success, message }`); shape is validated at load. Shell recipes are invoked as `<script> install|check|remove` with cwd at project root and `MULCH_RECIPE_NAME` / `MULCH_RECIPE_ACTION` in env. `ml setup --list` enumerates everything with source + shadow markers.
+`ml setup <name>` resolves recipes in this order: filesystem (`.mulch/recipes/<name>.ts` or `.sh`) → npm (`mulch-recipe-<name>`) → built-in (the three in `src/commands/setup.ts`). Filesystem wins so orgs can override built-ins without forking. TypeScript recipes are loaded directly by Bun and must default-export a `ProviderRecipe` (`install` / `check` / `remove` returning `{ success, message }`); shape is validated at load. Shell recipes are invoked as `<script> install|check|remove` with cwd at project root and `MULCH_RECIPE_NAME` / `MULCH_RECIPE_ACTION` in env. `ml setup --list` enumerates everything with source + shadow markers.
 
 ### Command Pattern
 
-Each command lives in `src/commands/<name>.ts` and exports a `register<Name>Command(program)` function. All 29 commands are registered in `src/cli.ts`. Entry point is `src/cli.ts` (executed directly by Bun, no `dist/` output).
+Each command lives in `src/commands/<name>.ts` and exports a `register<Name>Command(program)` function. All 30 commands are registered in `src/cli.ts`. Entry point is `src/cli.ts` (executed directly by Bun, no `dist/` output).
 
 ### Concurrency Safety
 
 - **Advisory file locking**: `withFileLock(filePath, fn)` in `src/utils/lock.ts` — uses `O_CREAT|O_EXCL` lock files with 50ms retry, 5s timeout, and 30s stale lock detection
 - **Atomic writes**: `writeExpertiseFile()` in `src/utils/expertise.ts` writes to a temp file then renames, preventing partial/corrupt JSONL
-- **Write commands** (record, edit, delete, delete-domain, compact, prune, archive, restore, doctor --fix) use both mechanisms
+- **Write commands** (record, edit, delete, delete-domain, move, compact, prune, archive, restore, doctor --fix) use both mechanisms
 - **Read-only commands** (prime, query, search, rank, status, validate, learn, ready) need no locking
 
 ### Worktree-Aware Storage
