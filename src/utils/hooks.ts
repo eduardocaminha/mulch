@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { log } from "../log.ts";
 import {
 	DEFAULT_HOOK_TIMEOUT_MS,
 	HOOK_EVENTS,
@@ -222,6 +223,21 @@ export async function runHooks<T>(
 			timedOut: res.timedOut,
 		});
 
+		// Diagnostic trace of hook execution. Silent at the default `info`
+		// level; surfaces under MULCH_DEBUG. Runs outside the expertise-file
+		// write lock (record.ts runs pre-/post-hooks around the locked write),
+		// so logging here can never contend with a concurrent writer.
+		log.debug(
+			{
+				event,
+				command,
+				exitCode: res.exitCode,
+				durationMs: res.durationMs,
+				timedOut: res.timedOut,
+			},
+			"hook executed",
+		);
+
 		if (forwardStderr && res.stderr.length > 0) {
 			process.stderr.write(res.stderr);
 			if (!res.stderr.endsWith("\n")) process.stderr.write("\n");
@@ -231,6 +247,10 @@ export async function runHooks<T>(
 			const reason = res.timedOut
 				? `hook \`${command}\` timed out after ${settings.timeoutMs}ms`
 				: `hook \`${command}\` exited with code ${res.exitCode}`;
+			log.warn(
+				{ event, command, exitCode: res.exitCode, timedOut: res.timedOut, blocking: isBlocking },
+				reason,
+			);
 			if (isBlocking) {
 				return {
 					ranAny: true,

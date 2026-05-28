@@ -32,6 +32,7 @@ import { registerSyncCommand } from "./commands/sync.ts";
 import { registerUpdateCommand } from "./commands/update.ts";
 import { registerUpgradeCommand } from "./commands/upgrade.ts";
 import { registerValidateCommand } from "./commands/validate.ts";
+import { log } from "./log.ts";
 import { initRegistryFromConfig } from "./registry/init.ts";
 import { outputJsonError } from "./utils/json-output.ts";
 import { brand, muted, setQuiet } from "./utils/palette.ts";
@@ -49,8 +50,14 @@ try {
 	const wantsJson = process.argv.includes("--json");
 	const message = (err as Error).message;
 	if (wantsJson) {
+		// In --json mode stderr must carry ONLY the machine-readable error
+		// object; a diagnostic log line would corrupt the parse. So skip the
+		// structured log here and let the JSON error stand alone.
 		outputJsonError("init", `Config error: ${message}`);
 	} else {
+		// Structured diagnostic for operators, gated behind MULCH_DEBUG so it
+		// never clutters the formatted human error below during normal use.
+		log.debug({ err: message }, "registry init from config failed");
 		process.stderr.write(`${chalk.red("Config error:")} ${message}\n`);
 		process.stderr.write(
 			chalk.dim("Edit .mulch/mulch.config.yaml to resolve, or run `mulch doctor` for details.\n"),
