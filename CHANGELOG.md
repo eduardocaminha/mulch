@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.6] - 2026-05-28
+
+The **Level 5 agent-readiness uplift** (validation mission VAL-MULCH-*): mulch adopts the portable L5 toolkit from the os-eco `templates/l5-toolkit/` tree — a structured diagnostic logger, ratchet/reporter scripts with baselined budgets, governance config, and operator docs. No schema, hook-event, config-key, or public CLI-command changes; the only runtime-visible addition is a stderr diagnostic channel gated behind `MULCH_DEBUG`. 1494 tests across 71 files / 3849 expect() calls (up from 1482 / 70 / 3831 in 0.10.5).
+
+### Added
+
+#### Structured diagnostic logging
+
+- **`src/log.ts` — pino-based diagnostic logger** (`pino` is now a runtime dependency): a *diagnostics-only* channel, distinct from mulch's product output. User-facing output (`ml prime` markdown, status tables, `--json` results, hints) still goes straight to stdout via `console.log` / `outputJson`; the logger writes exclusively to **stderr** (fd 2) so it can never collide with the CLI result or corrupt `--json` consumers. Silent at `info` for routine internals — those log at `debug`, gated behind `MULCH_DEBUG`. Level resolution: `MULCH_LOG_LEVEL` wins, else `debug` when `MULCH_DEBUG` is set, else `info`. Dev TTYs render via `pino-pretty` (a devDep, never shipped to consumers); CI / non-TTY / production emit newline-delimited JSON. Exports `createLogger()` (test-injectable destination + env), `resolveLogLevel()`, `redactDbUrl()`, and `REDACT_PATHS` (password / token / apiKey / secret / auth headers redaction).
+- **Hook-execution diagnostics in `src/utils/hooks.ts`**: each hook run now emits a `log.debug` trace (event, command, exitCode, durationMs, timedOut) and a `log.warn` on non-zero/timeout exit (with the `blocking` flag). Logging runs outside the expertise-file write lock, so it can never contend with a concurrent writer. Silent at the default level; surfaces under `MULCH_DEBUG`.
+- **`src/cli.ts` registry-init failure path**: now emits a gated `log.debug` diagnostic alongside the formatted human error; in `--json` mode the structured log is intentionally skipped so stderr carries only the machine-readable error object.
+
+#### L5 ratchet & reporter scripts
+
+- **Ratchet scripts** with co-located test suites and baselined budgets: `scripts/check-file-sizes.ts` (`scripts/file-size-budgets.json`), `scripts/check-debt-markers.ts` (`scripts/debt-markers-budget.json`), `scripts/check-coverage.ts` (`scripts/coverage-budgets.json`), and `scripts/validate-agents-md.ts`.
+- **Reporters**: `scripts/report-test-timing.ts` and `scripts/report-quality-metrics.ts`.
+- **`package.json` check/report scripts**: `check:size`, `check:debt`, `check:dups` (jscpd), `check:deps` (knip), `check:coverage`, `check:agents`, the aggregate `check:all`, `report:timing`, `report:quality`, `test:ci` (coverage + junit), and a `prepare` script that points `core.hooksPath` at `scripts/hooks`.
+
+#### Governance & config baselines
+
+- **CI / repo governance**: extended `.github/workflows/ci.yml` (pinned `bun-version`, `check:all` wiring), `.github/dependabot.yml` (cooldown), `.github/labels.yml` + `.github/workflows/sync-labels.yml`, and a `scripts/hooks/pre-commit` hook.
+- **Tooling baselines**: `.jscpd.json`, `knip.json`, `bunfig.toml`, extended `biome.json`, `.devcontainer/devcontainer.json`, `.env.example`, and an extended `.gitignore`.
+- **Operator docs**: `AGENTS.md`, `RUNBOOK.md`, and the first `.factory/skills/mulch-record-from-evidence/SKILL.md`.
+- **devDependencies**: `jscpd`, `knip`, `pino-pretty`.
+
+### Fixed
+
+- **`test/log.test.ts` discovery** (sd mulch-3fd5): moved the logger test under `test/` so default `bun test` discovers it, and corrected its import to `../src/log.ts`.
+
+### Changed
+
+- **README**: removed a broken os-eco logo embed.
+
+### Testing
+
+- 1494 tests across 71 files, 3849 expect() calls (up from 1482 / 70 / 3831 in 0.10.5).
+- New `test/log.test.ts` (95 lines) exercising `createLogger` with injected destinations/env, level resolution, redaction paths, and `redactDbUrl` edge cases — all via real streams, no mocks.
+- New co-located ratchet/reporter test suites: `scripts/check-file-sizes.test.ts`, `scripts/check-debt-markers.test.ts`, `scripts/check-coverage.test.ts`, `scripts/validate-agents-md.test.ts`, `scripts/report-quality-metrics.test.ts`, `scripts/report-test-timing.test.ts`.
+
 ## [0.10.5] - 2026-05-28
 
 A nightwatch hardening release out of plan pl-7a81 (parent mulch-e7f6): strict regex parsing for `--outcome-duration` / `--duration` (#37), normalized fatal-error coloring across the remaining CLI sites (#38), file-path context in Claude `settings.json` parse errors (#39), and `--json` honored by the deprecated `mulch update` command (#40). No schema, hook, config, or public command surface changes. 1482 tests across 70 files / 3831 expect() calls (up from 1460 / 69 / 3778 in 0.10.4).
@@ -775,7 +814,8 @@ Per-domain governance, lifecycle hooks, soft-archive prune, and pluggable provid
 - Prime output formats: `xml`, `plain`, `markdown`, `--mcp` (JSON)
 - Context-aware prime via `--context` (filters by git changed files)
 
-[Unreleased]: https://github.com/jayminwest/mulch/compare/v0.10.5...HEAD
+[Unreleased]: https://github.com/jayminwest/mulch/compare/v0.10.6...HEAD
+[0.10.6]: https://github.com/jayminwest/mulch/compare/v0.10.5...v0.10.6
 [0.10.5]: https://github.com/jayminwest/mulch/compare/v0.10.4...v0.10.5
 [0.10.4]: https://github.com/jayminwest/mulch/compare/v0.10.3...v0.10.4
 [0.10.3]: https://github.com/jayminwest/mulch/compare/v0.10.2...v0.10.3

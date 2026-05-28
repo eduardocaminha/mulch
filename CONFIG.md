@@ -1,6 +1,6 @@
 # Mulch Configuration Guide
 
-This guide covers `mulch.config.yaml` and the surrounding `.mulch/` surface for **v0.10.5**. It is the reference doc for orgs running Mulch across many repos and many ICs.
+This guide covers `mulch.config.yaml` and the surrounding `.mulch/` surface for **v0.10.6**. It is the reference doc for orgs running Mulch across many repos and many ICs.
 
 If you're new to Mulch, start with the [README](./README.md) — it covers what Mulch is and the day-one commands. This document assumes you already know `ml record` / `ml prime` and want to tune them.
 
@@ -792,8 +792,13 @@ ml record onboarding --type guide \
 | `MULCH_HOOK` | Mulch (set to `1`) | Inside hook scripts. Detect with `[ "${MULCH_HOOK:-}" = "1" ]`. |
 | `MULCH_RECIPE_NAME` | Mulch | Inside recipe scripts (shell only). |
 | `MULCH_RECIPE_ACTION` | Mulch | Inside recipe scripts. One of `install` / `check` / `remove`. |
+| `MULCH_DEBUG` | You (operator) | Read by `ml` at startup. Set to any non-empty value to raise the diagnostic logger to `debug` (hook traces, registry-init failures). Diagnostics go to **stderr** only and never touch stdout / `--json` output. |
+| `MULCH_LOG_LEVEL` | You (operator) | Read by `ml` at startup. Authoritative log level (`trace`/`debug`/`info`/`warn`/`error`/`fatal`); overrides `MULCH_DEBUG`. Default `info` (silent for routine internals). |
+| `MULCH_LOG_JSON` | You (operator) | Read by `ml` at startup. Set to `1` to force newline-delimited JSON logs even in a TTY (the default pretty-renders to stderr in an interactive terminal). |
 
 Parent env is preserved into both hooks and recipes. `SLACK_WEBHOOK_URL`, `OPS_TOKEN`, whatever you have exported in the agent's session is visible to the script.
+
+The `MULCH_*` *logging* variables (`MULCH_DEBUG`, `MULCH_LOG_LEVEL`, `MULCH_LOG_JSON`) control mulch's diagnostic channel only — they never alter product output. Mulch's user-facing output (the markdown `ml prime` emits, status tables, `--json` results) always goes to stdout; the logger writes exclusively to stderr, so turning on `MULCH_DEBUG` is safe even when piping `--json` to a machine consumer.
 
 ---
 
