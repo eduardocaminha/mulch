@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Writable } from "node:stream";
-import { createLogger, redactDbUrl, resolveLogLevel } from "./log.ts";
+import { createLogger, redactDbUrl, resolveLogLevel } from "../src/log.ts";
 
 /**
  * Capture one log line emitted by a logger writing to an in-memory stream.
