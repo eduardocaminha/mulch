@@ -8,7 +8,7 @@
 
 - id: nightwatch-patrol
   kind: cron
-  cron: '0 3 * * *'
+  cron: '0 3 * * 1'
   role: nightwatch
   timezone: America/Los_Angeles
   prompt: |
@@ -18,7 +18,7 @@
 
 - id: bugwatch-triage
   kind: cron
-  cron: '0 8 * * 0,3'
+  cron: '0 8 * * 4'
   role: bugwatch
   timezone: America/Los_Angeles
   prompt: |
