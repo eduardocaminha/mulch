@@ -18,9 +18,30 @@
  * in CI / non-TTY / production we emit newline-delimited JSON. `pino-pretty`
  * is intentionally not a runtime dependency — published consumers of
  * `@os-eco/mulch-cli` get JSON logs and never need the pretty transport.
+ * Because that promise must hold even in an interactive TTY, the pretty
+ * path is gated on `pino-pretty` being resolvable; when it is absent we fall
+ * back to JSON-on-stderr instead of letting pino throw on the missing target.
  */
 
+import { createRequire } from "node:module";
 import pino, { type Logger } from "pino";
+
+/**
+ * Whether the `pino-pretty` transport target can be loaded. It is a
+ * devDependency, so published consumers (`npm i -g`, `bun add`, production
+ * installs) won't have it — selecting the pretty transport there makes pino
+ * throw `unable to determine transport target for "pino-pretty"`. We probe
+ * resolvability up front so the pretty path is only taken when the package
+ * is actually present; otherwise we fall back to JSON-on-stderr.
+ */
+export function isPinoPrettyAvailable(): boolean {
+	try {
+		createRequire(import.meta.url).resolve("pino-pretty");
+		return true;
+	} catch {
+		return false;
+	}
+}
 
 /**
  * Resolve the effective log level from the environment. `MULCH_LOG_LEVEL`
@@ -67,7 +88,12 @@ export const REDACT_PATHS = [
  * convention.
  */
 export function createLogger(
-	opts: { level?: string; destination?: pino.DestinationStream; pretty?: boolean } = {},
+	opts: {
+		level?: string;
+		destination?: pino.DestinationStream;
+		pretty?: boolean;
+		prettyAvailable?: boolean;
+	} = {},
 ): Logger {
 	const level = opts.level ?? resolveLogLevel();
 	const redact = { paths: [...REDACT_PATHS], remove: true };
@@ -80,8 +106,13 @@ export function createLogger(
 		return pino({ name: "mulch", level, redact }, opts.destination);
 	}
 
-	const usePretty =
+	const wantsPretty =
 		opts.pretty ?? (process.stderr.isTTY === true && process.env.MULCH_LOG_JSON !== "1");
+
+	// Only take the pretty path when `pino-pretty` is actually resolvable.
+	// Published consumers run in an interactive TTY without the devDependency;
+	// selecting the transport there throws, so we degrade to JSON-on-stderr.
+	const usePretty = wantsPretty && (opts.prettyAvailable ?? isPinoPrettyAvailable());
 
 	if (usePretty) {
 		return pino({

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Writable } from "node:stream";
-import { createLogger, redactDbUrl, resolveLogLevel } from "../src/log.ts";
+import { createLogger, isPinoPrettyAvailable, redactDbUrl, resolveLogLevel } from "../src/log.ts";
 
 /**
  * Capture one log line emitted by a logger writing to an in-memory stream.
@@ -69,6 +69,43 @@ describe("resolveLogLevel", () => {
 		// A warn call at the same level does emit.
 		const warned = captureLine({ level: "warn" }, (l) => l.warn({ a: 1 }, "at threshold"));
 		expect(warned).toContain("at threshold");
+	});
+});
+
+describe("pino-pretty transport fallback", () => {
+	test("pino-pretty is resolvable in the dev environment", () => {
+		// In this repo pino-pretty is a devDependency, so the probe must
+		// report it available — guards against the probe silently always
+		// returning false.
+		expect(isPinoPrettyAvailable()).toBe(true);
+	});
+
+	test("falls back to JSON-on-stderr when pino-pretty is unavailable", () => {
+		// Simulates a published consumer in an interactive TTY without the
+		// dev-only pretty transport: must not throw (acceptance criterion).
+		expect(() => createLogger({ pretty: true, prettyAvailable: false })).not.toThrow();
+	});
+
+	test("emits structured JSON on the fallback path", () => {
+		// With pino-pretty forced unavailable but pretty requested, the logger
+		// still produces machine-readable JSON when handed a destination.
+		let out = "";
+		const stream = new Writable({
+			write(chunk, _enc, cb) {
+				out += chunk.toString();
+				cb();
+			},
+		});
+		const logger = createLogger({
+			level: "info",
+			destination: stream,
+			pretty: true,
+			prettyAvailable: false,
+		});
+		logger.info({ domain: "cli" }, "fallback");
+		expect(out).toContain("fallback");
+		expect(out).toContain("cli");
+		expect(() => JSON.parse(out)).not.toThrow();
 	});
 });
 
