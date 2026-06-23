@@ -24,3 +24,15 @@
   prompt: |
     Triage open bug seeds and plan fixes. Follow your procedure exactly.
     Today's date is {{date}}. If no bugs qualify, report clean and exit.
+
+- id: syncwatch-reconcile
+  kind: cron
+  cron: '0 6 * * *'
+  role: cam-syncwatch
+  timezone: America/Los_Angeles
+  prompt: |
+    Reconcile this repo against its jaymin upstream. Follow your procedure
+    exactly. Today's date is {{date}}. Cherry-pick candidates only, never a
+    full merge. Produce the digest seed + the Sync Warden message, and
+    propose an sd plan for the cherry-picks (do not dispatch it). If the
+    fork is in sync, report in sync and exit.
