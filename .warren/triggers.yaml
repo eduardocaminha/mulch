@@ -9,7 +9,7 @@
 - id: nightwatch-patrol
   kind: cron
   cron: '0 3 * * 1'
-  role: nightwatch
+  role: cam-nightwatch
   timezone: America/Los_Angeles
   prompt: |
     Scan this repo for quality issues. Follow your procedure exactly.
@@ -19,7 +19,7 @@
 - id: bugwatch-triage
   kind: cron
   cron: '0 8 * * 4'
-  role: bugwatch
+  role: cam-bugwatch
   timezone: America/Los_Angeles
   prompt: |
     Triage open bug seeds and plan fixes. Follow your procedure exactly.
