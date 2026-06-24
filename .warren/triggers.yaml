@@ -8,7 +8,7 @@
 
 - id: nightwatch-patrol
   kind: cron
-  cron: '0 0 * * 1'
+  cron: '0 8 * * 1'
   role: cam-nightwatch
   timezone: America/Sao_Paulo
   prompt: |
@@ -18,7 +18,7 @@
 
 - id: bugwatch-triage
   kind: cron
-  cron: '0 1 * * 4'
+  cron: '0 9 * * 4'
   role: cam-bugwatch
   timezone: America/Sao_Paulo
   prompt: |
@@ -27,7 +27,7 @@
 
 - id: syncwatch-reconcile
   kind: cron
-  cron: '0 2 * * *'
+  cron: '0 10 * * *'
   role: cam-syncwatch
   timezone: America/Sao_Paulo
   prompt: |
@@ -39,7 +39,7 @@
 
 - id: contribwatch-suggest
   kind: cron
-  cron: '0 4 * * *'
+  cron: '0 12 * * *'
   role: cam-contribwatch
   timezone: America/Sao_Paulo
   prompt: |
@@ -51,7 +51,7 @@
 
 - id: securitywatch-scan
   kind: cron
-  cron: '0 3 * * *'
+  cron: '0 11 * * *'
   role: cam-securitywatch
   timezone: America/Sao_Paulo
   prompt: |
